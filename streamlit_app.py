@@ -154,8 +154,11 @@ def render_dashboard(status_filter):
         col3.write(item)
         col4.write(body_preview)
         col5.write(f"`{inquiry_num}`")
-        if col6.button("詳細", key=f"btn_{inquiry_num}"):
-            navigate_to_detail(inquiry_num)
+        col6.markdown(
+            f'<a href="?inquiry={inquiry_num}" target="_blank" '
+            f'style="text-decoration:none;">📋 詳細</a>',
+            unsafe_allow_html=True,
+        )
 
 
 # ── 詳細画面 ──────────────────────────────────────────────
