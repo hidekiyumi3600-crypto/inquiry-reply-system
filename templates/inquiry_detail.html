@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}問い合わせ #{{ inquiry.inquiry_number }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>一覧に戻る
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- 左カラム: 問い合わせ情報 -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">問い合わせ情報</h5>
+                {% if inquiry.status == 'completed' %}
+                <span class="badge bg-success">対応完了</span>
+                {% elif inquiry.status == 'replied' %}
+                <span class="badge bg-info">返信済み</span>
+                {% else %}
+                <span class="badge bg-danger">未返信</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><th class="text-muted" style="width:120px;">番号</th><td><code>{{ inquiry.inquiry_number }}</code></td></tr>
+                    <tr><th class="text-muted">お客様名</th><td>{{ inquiry.customer_name or '-' }}</td></tr>
+                    <tr><th class="text-muted">カテゴリ</th><td>{{ inquiry.category or '-' }}</td></tr>
+                    <tr><th class="text-muted">商品名</th><td>{{ inquiry.item_name or '-' }}</td></tr>
+                    <tr><th class="text-muted">商品番号</th><td>{{ inquiry.item_number or '-' }}</td></tr>
+                    <tr><th class="text-muted">注文番号</th><td>{{ inquiry.order_number or '-' }}</td></tr>
+                    <tr><th class="text-muted">問い合わせ日</th><td>{{ inquiry.inquiry_date or '-' }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- お問い合わせ内容 -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-chat-left-text me-2"></i>お問い合わせ内容</h6>
+            </div>
+            <div class="card-body">
+                <div class="inquiry-body">{{ inquiry.body or '(内容なし)' }}</div>
+            </div>
+        </div>
+
+        <!-- 返信履歴 (楽天API + ローカル送信分) -->
+        {% if api_replies or sent_replies %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-reply-fill me-2"></i>返信履歴</h6>
+            </div>
+            <div class="card-body">
+                {% for reply in api_replies %}
+                <div class="sent-reply mb-3 {% if not loop.last or sent_replies %}border-bottom pb-3{% endif %}">
+                    <small class="text-muted">{{ reply.regDate }} (楽天API)</small>
+                    <div class="mt-1">{{ reply.message }}</div>
+                </div>
+                {% endfor %}
+                {% for reply in sent_replies %}
+                <div class="sent-reply mb-3 {% if not loop.last %}border-bottom pb-3{% endif %}">
+                    <small class="text-muted">{{ reply.created_at }} (ローカル記録)</small>
+                    <div class="mt-1">{{ reply.body }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 右カラム: 返信エディタ -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>返信エディタ</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 mb-3">
+                    <button type="button" class="btn btn-outline-primary" id="btn-generate"
+                            data-inquiry="{{ inquiry.inquiry_number }}">
+                        <i class="bi bi-stars me-1"></i>AI下書き生成
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="btn-regenerate"
+                            data-inquiry="{{ inquiry.inquiry_number }}" style="display:none;">
+                        <i class="bi bi-arrow-clockwise me-1"></i>再生成
+                    </button>
+                </div>
+
+                <div id="generate-spinner" class="text-center py-4" style="display:none;">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">AI が返信を考えています...</p>
+                </div>
+
+                <textarea id="reply-body" class="form-control mb-3" rows="10"
+                          placeholder="ここに返信内容が表示されます。AI下書き生成を押すか、直接入力してください。">{% if drafts %}{{ drafts[0].body }}{% endif %}</textarea>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-success" id="btn-send"
+                            data-inquiry="{{ inquiry.inquiry_number }}">
+                        <i class="bi bi-send-fill me-1"></i>返信を送信
+                    </button>
+                    {% if inquiry.status != 'completed' %}
+                    <button type="button" class="btn btn-outline-dark" id="btn-complete"
+                            data-inquiry="{{ inquiry.inquiry_number }}">
+                        <i class="bi bi-check-circle me-1"></i>対応完了
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div id="alert-area" class="mt-3"></div>
+    </div>
+</div>
+{% endblock %}

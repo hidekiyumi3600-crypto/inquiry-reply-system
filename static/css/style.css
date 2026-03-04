@@ -1,0 +1,29 @@
+body {
+    background-color: #f5f6fa;
+}
+
+.inquiry-body {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.8;
+}
+
+.sent-reply div {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.8;
+}
+
+#reply-body {
+    font-size: 0.95rem;
+    line-height: 1.8;
+}
+
+.table .text-truncate {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
