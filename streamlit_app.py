@@ -203,28 +203,10 @@ def render_detail(inquiry_number):
     with right:
         st.subheader("返信エディタ")
 
-        # AI下書き生成
-        if st.button("✨ AI下書き生成"):
-            with st.spinner("AIが返信を考えています..."):
-                try:
-                    draft_text = inquiry_service.generate_draft(inquiry_number)
-                    st.session_state[f"draft_{inquiry_number}"] = draft_text
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"生成エラー: {e}")
-
-        # テキストエリア（下書きがあれば表示）
-        default_text = ""
-        if f"draft_{inquiry_number}" in st.session_state:
-            default_text = st.session_state[f"draft_{inquiry_number}"]
-        elif drafts:
-            default_text = drafts[0]["body"]
-
         reply_body = st.text_area(
             "返信内容",
-            value=default_text,
             height=300,
-            placeholder="ここに返信内容が表示されます。AI下書き生成を押すか、直接入力してください。",
+            placeholder="返信内容を入力してください。",
             label_visibility="collapsed",
         )
 
