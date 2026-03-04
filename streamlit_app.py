@@ -192,13 +192,7 @@ def render_detail(inquiry_number):
 
         st.divider()
         st.subheader("お問い合わせ内容")
-        st.text_area(
-            "本文",
-            value=inquiry.get("body") or "(内容なし)",
-            height=200,
-            disabled=True,
-            label_visibility="collapsed",
-        )
+        st.write(inquiry.get("body") or "(内容なし)")
 
         # 返信履歴
         if api_replies or sent_replies:
