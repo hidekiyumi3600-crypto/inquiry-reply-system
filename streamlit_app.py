@@ -35,16 +35,18 @@ if not check_password():
 
 # ── URLベースのナビゲーション ─────────────────────────────
 def get_selected_inquiry():
-    params = st.query_params
-    return params.get("inquiry", None)
+    return st.query_params.get("inquiry", None)
 
 
 def navigate_to_detail(inquiry_number):
-    st.query_params["inquiry"] = inquiry_number
+    st.query_params.inquiry = inquiry_number
+    st.rerun()
 
 
 def navigate_to_list():
-    st.query_params.clear()
+    if "inquiry" in st.query_params:
+        del st.query_params["inquiry"]
+    st.rerun()
 
 
 # ── サイドバー ────────────────────────────────────────────
