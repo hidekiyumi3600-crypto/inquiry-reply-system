@@ -32,3 +32,6 @@ class Config:
     # OpenAI
     OPENAI_API_KEY = _get_secret("OPENAI_API_KEY")
     OPENAI_MODEL = "gpt-4o-mini"
+
+    # アプリ認証
+    APP_PASSWORD = _get_secret("APP_PASSWORD", "admin")

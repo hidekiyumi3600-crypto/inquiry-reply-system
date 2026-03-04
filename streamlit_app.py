@@ -12,6 +12,27 @@ db.init_db(Config.DATABASE_PATH)
 # ── ページ設定 ────────────────────────────────────────────
 st.set_page_config(page_title="問い合わせ返信", page_icon="📩", layout="wide")
 
+# ── 認証 ──────────────────────────────────────────────────
+def check_password():
+    """パスワード認証。正しければTrueを返す。"""
+    if st.session_state.get("authenticated"):
+        return True
+
+    st.title("📩 問い合わせ返信システム")
+    password = st.text_input("パスワードを入力してください", type="password")
+    if st.button("ログイン", use_container_width=True):
+        correct = Config.APP_PASSWORD
+        if password == correct:
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("パスワードが正しくありません。")
+    return False
+
+
+if not check_password():
+    st.stop()
+
 # ── セッション初期化 ──────────────────────────────────────
 if "selected_inquiry" not in st.session_state:
     st.session_state.selected_inquiry = None
