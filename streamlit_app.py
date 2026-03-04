@@ -132,22 +132,19 @@ def render_dashboard(status_filter):
             badge = "🔴 未返信"
 
         inquiry_num = inq["inquiry_number"]
-        customer = inq.get("customer_name") or "-"
-        category = inq.get("category") or "-"
-        item = inq.get("item_name") or "-"
-        body_preview = (inq.get("body") or "-")[:50]
-        date = inq.get("inquiry_date") or "-"
+        customer = (inq.get("customer_name") or "-")[:6]
+        item = (inq.get("item_name") or "-")[:15]
+        body_preview = (inq.get("body") or "-")[:20]
 
-        col1, col2, col3, col4, col5, col6, col7 = st.columns(
-            [1, 1.5, 1, 1, 1.5, 2, 0.8]
+        col1, col2, col3, col4, col5, col6 = st.columns(
+            [0.8, 0.8, 1.2, 1.2, 1.5, 0.6]
         )
         col1.write(badge)
-        col2.write(f"`{inquiry_num}`")
-        col3.write(customer)
-        col4.write(category)
-        col5.write(item)
-        col6.write(body_preview)
-        if col7.button("詳細", key=f"btn_{inquiry_num}"):
+        col2.write(customer)
+        col3.write(item)
+        col4.write(body_preview)
+        col5.write(f"`{inquiry_num}`")
+        if col6.button("詳細", key=f"btn_{inquiry_num}"):
             st.session_state.selected_inquiry = inquiry_num
             st.rerun()
 
