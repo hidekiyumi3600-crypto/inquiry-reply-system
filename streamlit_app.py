@@ -33,9 +33,18 @@ def check_password():
 if not check_password():
     st.stop()
 
-# ── セッション初期化 ──────────────────────────────────────
-if "selected_inquiry" not in st.session_state:
-    st.session_state.selected_inquiry = None
+# ── URLベースのナビゲーション ─────────────────────────────
+def get_selected_inquiry():
+    params = st.query_params
+    return params.get("inquiry", None)
+
+
+def navigate_to_detail(inquiry_number):
+    st.query_params["inquiry"] = inquiry_number
+
+
+def navigate_to_list():
+    st.query_params.clear()
 
 
 # ── サイドバー ────────────────────────────────────────────
@@ -82,10 +91,9 @@ def render_sidebar():
         st.divider()
 
         # 一覧に戻るボタン
-        if st.session_state.selected_inquiry:
+        if get_selected_inquiry():
             if st.button("← 一覧に戻る", use_container_width=True):
-                st.session_state.selected_inquiry = None
-                st.rerun()
+                navigate_to_list()
 
     return status_filter
 
@@ -145,8 +153,7 @@ def render_dashboard(status_filter):
         col4.write(body_preview)
         col5.write(f"`{inquiry_num}`")
         if col6.button("詳細", key=f"btn_{inquiry_num}"):
-            st.session_state.selected_inquiry = inquiry_num
-            st.rerun()
+            navigate_to_detail(inquiry_num)
 
 
 # ── 詳細画面 ──────────────────────────────────────────────
@@ -154,7 +161,7 @@ def render_detail(inquiry_number):
     data = inquiry_service.get_inquiry_detail(inquiry_number)
     if not data:
         st.error("問い合わせが見つかりません。")
-        st.session_state.selected_inquiry = None
+        navigate_to_list()
         return
 
     inquiry = data["inquiry"]
@@ -255,7 +262,8 @@ def render_detail(inquiry_number):
 # ── メイン ────────────────────────────────────────────────
 status_filter = render_sidebar()
 
-if st.session_state.selected_inquiry:
-    render_detail(st.session_state.selected_inquiry)
+selected = get_selected_inquiry()
+if selected:
+    render_detail(selected)
 else:
     render_dashboard(status_filter)
