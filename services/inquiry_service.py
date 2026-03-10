@@ -23,7 +23,7 @@ def sync_inquiries(days_back=365):
     楽天APIの日付範囲上限が30日のため、30日ずつ分割してリクエストする。
     Returns: 同期した件数
     """
-    MAX_RANGE = 30  # 楽天API日付範囲上限
+    MAX_RANGE = 29  # 楽天API日付範囲上限（時刻丸めによる超過を防止）
 
     try:
         count = 0
