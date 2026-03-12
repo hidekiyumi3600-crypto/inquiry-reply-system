@@ -78,7 +78,10 @@ def check_password():
     password = st.text_input("パスワードを入力してください", type="password")
     if st.button("ログイン", use_container_width=True):
         if password == Config.APP_PASSWORD:
-            cookie_controller.set("auth_token", _auth_token(), max_age=7 * 24 * 60 * 60)
+            try:
+                cookie_controller.set("auth_token", _auth_token(), max_age=7 * 24 * 60 * 60)
+            except (TypeError, AttributeError):
+                pass
             st.session_state.authenticated = True
             st.rerun()
         else:
