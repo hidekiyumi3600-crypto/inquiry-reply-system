@@ -13,7 +13,7 @@ def safe_text(text):
     if not text:
         return
     escaped = html.escape(text).replace("\n", "<br>")
-    st.markdown(f'<div style="white-space:pre-wrap;">{escaped}</div>', unsafe_allow_html=True)
+    st.html(f'<span style="font-size:14px;color:inherit;">{escaped}</span>')
 
 # ── キャンセル検出 ────────────────────────────────────────
 CANCEL_KEYWORDS = [
