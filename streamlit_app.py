@@ -1,11 +1,15 @@
 """問い合わせ返信システム — Streamlit版"""
 
+import hashlib
 import re
 
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit_cookies_controller import CookieController
 
 from config import Config
+
+cookie_controller = CookieController()
 
 
 # ── キャンセル検出 ────────────────────────────────────────
@@ -45,16 +49,27 @@ components.html(
 )
 
 # ── 認証 ──────────────────────────────────────────────────
+def _auth_token():
+    return hashlib.sha256(f"inquiry-auth-{Config.APP_PASSWORD}".encode()).hexdigest()[:32]
+
+
 def check_password():
-    """パスワード認証。正しければTrueを返す。"""
+    """パスワード認証。クッキーで7日間ログイン維持。"""
+    # セッション内で認証済み
     if st.session_state.get("authenticated"):
+        return True
+
+    # クッキーをチェック
+    token = cookie_controller.get("auth_token")
+    if token == _auth_token():
+        st.session_state.authenticated = True
         return True
 
     st.title("📩 問い合わせ返信システム")
     password = st.text_input("パスワードを入力してください", type="password")
     if st.button("ログイン", use_container_width=True):
-        correct = Config.APP_PASSWORD
-        if password == correct:
+        if password == Config.APP_PASSWORD:
+            cookie_controller.set("auth_token", _auth_token(), max_age=7 * 24 * 60 * 60)
             st.session_state.authenticated = True
             st.rerun()
         else:
