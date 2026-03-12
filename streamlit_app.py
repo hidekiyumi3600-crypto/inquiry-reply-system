@@ -59,8 +59,12 @@ def check_password():
     if st.session_state.get("authenticated"):
         return True
 
-    # クッキーをチェック（初回レンダリングではNoneが返るので1回待つ）
-    token = cookie_controller.get("auth_token")
+    # クッキーをチェック（初回レンダリングではコンポーネント未初期化のためエラーになる）
+    try:
+        token = cookie_controller.get("auth_token")
+    except (TypeError, AttributeError):
+        token = None
+
     if token is None and "cookie_loaded" not in st.session_state:
         st.session_state.cookie_loaded = True
         st.rerun()
