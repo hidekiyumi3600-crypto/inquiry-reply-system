@@ -59,8 +59,13 @@ def check_password():
     if st.session_state.get("authenticated"):
         return True
 
-    # クッキーをチェック
+    # クッキーをチェック（初回レンダリングではNoneが返るので1回待つ）
     token = cookie_controller.get("auth_token")
+    if token is None and "cookie_loaded" not in st.session_state:
+        st.session_state.cookie_loaded = True
+        st.rerun()
+        return False
+
     if token == _auth_token():
         st.session_state.authenticated = True
         return True
