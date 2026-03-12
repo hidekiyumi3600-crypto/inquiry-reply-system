@@ -152,12 +152,12 @@ def render_dashboard(status_filter):
         s = inq["status"]
         if s in counts:
             counts[s] += 1
-        if inq["is_cancel"]:
+        if inq["is_cancel"] and inq["status"] == "open":
             counts["cancel"] += 1
 
     # フィルタ適用
     if status_filter == "cancel":
-        inquiries = [inq for inq in inquiries if inq["is_cancel"]]
+        inquiries = [inq for inq in inquiries if inq["is_cancel"] and inq["status"] == "open"]
     elif status_filter != "all":
         inquiries = [inq for inq in inquiries if inq["status"] == status_filter]
 
