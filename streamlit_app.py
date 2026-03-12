@@ -5,12 +5,13 @@ import re
 
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit_cookies_controller import CookieController
 
 from config import Config
+from database import db
+from services import inquiry_service
 
-cookie_controller = CookieController()
-
+# ── 認証トークン ──────────────────────────────────────────
+AUTH_TOKEN = hashlib.sha256(f"inquiry-auth-{Config.APP_PASSWORD}".encode()).hexdigest()[:16]
 
 # ── キャンセル検出 ────────────────────────────────────────
 CANCEL_KEYWORDS = [
@@ -22,12 +23,10 @@ _cancel_pattern = re.compile("|".join(CANCEL_KEYWORDS))
 
 
 def is_cancel_request(text):
-    """テキストにキャンセル関連キーワードが含まれるか判定"""
     if not text:
         return False
     return bool(_cancel_pattern.search(text))
-from database import db
-from services import inquiry_service
+
 
 # ── DB初期化 ──────────────────────────────────────────────
 db.init_db(Config.DATABASE_PATH)
@@ -48,29 +47,15 @@ components.html(
     height=0,
 )
 
+
 # ── 認証 ──────────────────────────────────────────────────
-def _auth_token():
-    return hashlib.sha256(f"inquiry-auth-{Config.APP_PASSWORD}".encode()).hexdigest()[:32]
-
-
 def check_password():
-    """パスワード認証。クッキーで7日間ログイン維持。"""
-    # セッション内で認証済み
+    """パスワード認証。URLトークンでタブ間の認証を共有。"""
     if st.session_state.get("authenticated"):
         return True
 
-    # クッキーをチェック（初回レンダリングではコンポーネント未初期化のためエラーになる）
-    try:
-        token = cookie_controller.get("auth_token")
-    except (TypeError, AttributeError):
-        token = None
-
-    if token is None and "cookie_loaded" not in st.session_state:
-        st.session_state.cookie_loaded = True
-        st.rerun()
-        return False
-
-    if token == _auth_token():
+    # URLのトークンをチェック
+    if st.query_params.get("token") == AUTH_TOKEN:
         st.session_state.authenticated = True
         return True
 
@@ -78,11 +63,8 @@ def check_password():
     password = st.text_input("パスワードを入力してください", type="password")
     if st.button("ログイン", use_container_width=True):
         if password == Config.APP_PASSWORD:
-            try:
-                cookie_controller.set("auth_token", _auth_token(), max_age=7 * 24 * 60 * 60)
-            except (TypeError, AttributeError):
-                pass
             st.session_state.authenticated = True
+            st.query_params["token"] = AUTH_TOKEN
             st.rerun()
         else:
             st.error("パスワードが正しくありません。")
@@ -92,14 +74,10 @@ def check_password():
 if not check_password():
     st.stop()
 
+
 # ── URLベースのナビゲーション ─────────────────────────────
 def get_selected_inquiry():
     return st.query_params.get("inquiry", None)
-
-
-def navigate_to_detail(inquiry_number):
-    st.query_params.inquiry = inquiry_number
-    st.rerun()
 
 
 def navigate_to_list():
@@ -225,7 +203,7 @@ def render_dashboard(status_filter):
         col4.write(body_preview)
         col5.write(f"`{inquiry_num}`")
         col6.markdown(
-            f'<a href="?inquiry={inquiry_num}" target="_blank" '
+            f'<a href="?inquiry={inquiry_num}&token={AUTH_TOKEN}" target="_blank" '
             f'style="text-decoration:none;">📋 詳細</a>',
             unsafe_allow_html=True,
         )
@@ -319,7 +297,6 @@ def render_detail(inquiry_number):
                         try:
                             inquiry_service.send_reply(inquiry_number, reply_body.strip())
                             st.success("返信を送信しました！")
-                            # 下書きセッションをクリア
                             st.session_state.pop(f"draft_{inquiry_number}", None)
                             st.rerun()
                         except Exception as e:
