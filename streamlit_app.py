@@ -1,8 +1,25 @@
 """問い合わせ返信システム — Streamlit版"""
 
+import re
+
 import streamlit as st
 
 from config import Config
+
+# ── キャンセル検出 ────────────────────────────────────────
+CANCEL_KEYWORDS = [
+    "キャンセル", "取り消し", "取消", "注文を取り消", "注文取消",
+    "キャンセルしたい", "キャンセル希望", "キャンセルお願い",
+    "キャンセルをお願い", "取りやめ", "注文をやめ",
+]
+_cancel_pattern = re.compile("|".join(CANCEL_KEYWORDS))
+
+
+def is_cancel_request(text):
+    """テキストにキャンセル関連キーワードが含まれるか判定"""
+    if not text:
+        return False
+    return bool(_cancel_pattern.search(text))
 from database import db
 from services import inquiry_service
 
@@ -80,12 +97,13 @@ def render_sidebar():
         st.subheader("フィルタ")
         status_filter = st.radio(
             "ステータス",
-            options=["all", "open", "replied", "completed"],
+            options=["all", "open", "replied", "completed", "cancel"],
             format_func=lambda s: {
                 "all": "すべて",
                 "open": "🔴 未返信",
                 "replied": "🔵 返信済",
                 "completed": "🟢 完了",
+                "cancel": "⚠️ キャンセル希望",
             }[s],
             label_visibility="collapsed",
         )
@@ -104,24 +122,33 @@ def render_sidebar():
 def render_dashboard(status_filter):
     inquiries = inquiry_service.get_inquiry_list()
 
+    # キャンセルフラグ付与
+    for inq in inquiries:
+        inq["is_cancel"] = is_cancel_request(inq.get("body"))
+
     # 件数カウント
-    counts = {"all": len(inquiries), "open": 0, "replied": 0, "completed": 0}
+    counts = {"all": len(inquiries), "open": 0, "replied": 0, "completed": 0, "cancel": 0}
     for inq in inquiries:
         s = inq["status"]
         if s in counts:
             counts[s] += 1
+        if inq["is_cancel"]:
+            counts["cancel"] += 1
 
     # フィルタ適用
-    if status_filter != "all":
+    if status_filter == "cancel":
+        inquiries = [inq for inq in inquiries if inq["is_cancel"]]
+    elif status_filter != "all":
         inquiries = [inq for inq in inquiries if inq["status"] == status_filter]
 
     # ヘッダー
     st.header("問い合わせ一覧")
-    cols = st.columns(4)
+    cols = st.columns(5)
     cols[0].metric("すべて", counts["all"])
     cols[1].metric("🔴 未返信", counts["open"])
     cols[2].metric("🔵 返信済", counts["replied"])
     cols[3].metric("🟢 完了", counts["completed"])
+    cols[4].metric("⚠️ キャンセル", counts["cancel"])
 
     st.divider()
 
@@ -136,10 +163,11 @@ def render_dashboard(status_filter):
             badge = "🟢 完了"
         elif status == "replied":
             badge = "🔵 返信済"
-        elif inq.get("has_draft"):
-            badge = "🟡 下書き"
         else:
             badge = "🔴 未返信"
+
+        if inq["is_cancel"]:
+            badge = f"⚠️ {badge}"
 
         inquiry_num = inq["inquiry_number"]
         customer = (inq.get("customer_name") or "-")[:6]
@@ -184,6 +212,9 @@ def render_detail(inquiry_number):
 
     st.header(f"問い合わせ #{inquiry_number}")
     st.write(status_label)
+
+    if is_cancel_request(inquiry.get("body")):
+        st.warning("⚠️ この問い合わせにはキャンセル希望の内容が含まれています")
 
     left, right = st.columns([2, 3])
 
