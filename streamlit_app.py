@@ -1,19 +1,12 @@
 """問い合わせ返信システム — Streamlit版"""
 
-import html
 import re
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from config import Config
 
-
-def safe_text(text):
-    """st.writeのLaTeX数式誤検出を回避して安全にテキスト表示"""
-    if not text:
-        return
-    escaped = html.escape(text).replace("\n", "<br>")
-    st.html(f'<span style="font-size:14px;color:inherit;">{escaped}</span>')
 
 # ── キャンセル検出 ────────────────────────────────────────
 CANCEL_KEYWORDS = [
@@ -37,6 +30,19 @@ db.init_db(Config.DATABASE_PATH)
 
 # ── ページ設定 ────────────────────────────────────────────
 st.set_page_config(page_title="問い合わせ返信", page_icon="📩", layout="wide")
+
+# Safari等の古いブラウザでStreamlit内部のLaTeX検出regexがエラーになる問題を抑制
+components.html(
+    """<script>
+    window.addEventListener('error', function(e) {
+        if (e.message && e.message.includes('Invalid regular expression')) {
+            e.preventDefault();
+            return true;
+        }
+    });
+    </script>""",
+    height=0,
+)
 
 # ── 認証 ──────────────────────────────────────────────────
 def check_password():
@@ -187,12 +193,9 @@ def render_dashboard(status_filter):
             [0.8, 0.8, 1.2, 1.2, 1.5, 0.6]
         )
         col1.write(badge)
-        with col2:
-            safe_text(customer)
-        with col3:
-            safe_text(item)
-        with col4:
-            safe_text(body_preview)
+        col2.write(customer)
+        col3.write(item)
+        col4.write(body_preview)
         col5.write(f"`{inquiry_num}`")
         col6.markdown(
             f'<a href="?inquiry={inquiry_num}" target="_blank" '
@@ -243,12 +246,11 @@ def render_detail(inquiry_number):
             "問い合わせ日": inquiry.get("inquiry_date") or "-",
         }
         for label, value in info_data.items():
-            escaped_val = html.escape(str(value))
-            st.markdown(f"**{label}:** {escaped_val}")
+            st.markdown(f"**{label}:** {value}")
 
         st.divider()
         st.subheader("お問い合わせ内容")
-        safe_text(inquiry.get("body") or "(内容なし)")
+        st.write(inquiry.get("body") or "(内容なし)")
 
         # 返信履歴
         if api_replies or sent_replies:
@@ -259,12 +261,12 @@ def render_detail(inquiry_number):
                     reply_from = reply.get("replyFrom", "")
                     from_label = "🏪 店舗" if reply_from.lower() == "merchant" else "👤 お客様"
                     st.caption(f"{reply.get('regDate', '')} — {from_label}")
-                    safe_text(reply.get("message", ""))
+                    st.write(reply.get("message", ""))
                     st.divider()
             for reply in sent_replies:
                 with st.container():
                     st.caption(f"{reply['created_at']} — 🏪 店舗 (ローカル記録)")
-                    safe_text(reply["body"])
+                    st.write(reply["body"])
                     st.divider()
 
     # ── 右カラム: 返信エディタ ──
