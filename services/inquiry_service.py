@@ -23,21 +23,21 @@ def sync_inquiries(days_back=365):
     楽天APIの日付範囲上限が30日のため、30日ずつ分割してリクエストする。
     Returns: 同期した件数
     """
-    MAX_RANGE = 29  # 楽天API日付範囲上限（時刻丸めによる超過を防止）
+    MAX_RANGE = 30  # 楽天API日付範囲上限
 
     try:
         count = 0
-        now = datetime.now()
-        end = now
+        today = datetime.now().date()
+        end_date = today
 
-        # days_backを30日ごとのチャンクに分割
+        # days_backを30日ごとのチャンクに分割（日付単位で正確に区切る）
         remaining = days_back
         while remaining > 0:
             chunk = min(remaining, MAX_RANGE)
-            start = end - timedelta(days=chunk)
+            start_date = end_date - timedelta(days=chunk - 1)
 
-            from_date = start.strftime("%Y-%m-%dT00:00:00")
-            to_date = end.strftime("%Y-%m-%dT23:59:59")
+            from_date = f"{start_date}T00:00:00"
+            to_date = f"{end_date}T23:59:59"
 
             page = 1
             while True:
@@ -59,7 +59,7 @@ def sync_inquiries(days_back=365):
                     break
                 page += 1
 
-            end = start
+            end_date = start_date - timedelta(days=1)
             remaining -= chunk
 
         db.log_sync(count, "success")
