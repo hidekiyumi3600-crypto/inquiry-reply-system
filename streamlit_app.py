@@ -1,7 +1,10 @@
 """問い合わせ返信システム — Streamlit版"""
 
+import csv
 import hashlib
+import io
 import re
+from datetime import datetime
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -127,6 +130,46 @@ def render_sidebar():
             }[s],
             label_visibility="collapsed",
         )
+
+        st.divider()
+
+        # CSVエクスポート
+        st.subheader("データエクスポート")
+        if st.button("📥 CSVダウンロード", use_container_width=True):
+            rows = db.get_inquiries_with_replies()
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow([
+                "問い合わせ番号", "問い合わせ日", "お客様名", "カテゴリ",
+                "種別", "商品名", "商品番号", "注文番号",
+                "問い合わせ内容", "返信内容", "返信日", "ステータス",
+                "AIレビュー", "レビューコメント",
+            ])
+            for r in rows:
+                writer.writerow([
+                    r["inquiry_number"],
+                    r["inquiry_date"],
+                    r["customer_name"],
+                    r["category"],
+                    r["subject"],
+                    r["item_name"],
+                    r["item_number"],
+                    r["order_number"],
+                    r["inquiry_body"],
+                    r["reply_body"] or "",
+                    r["reply_date"] or "",
+                    r["status"],
+                    "",  # AIレビュー（スプレッドシートで記入）
+                    "",  # レビューコメント（スプレッドシートで記入）
+                ])
+            today = datetime.now().strftime("%Y%m%d")
+            st.download_button(
+                label="💾 ファイルを保存",
+                data=buf.getvalue().encode("utf-8-sig"),
+                file_name=f"問い合わせデータ_{today}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
 
         st.divider()
 

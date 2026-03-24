@@ -161,6 +161,34 @@ def log_sync(count, status="success", message=None):
     conn.close()
 
 
+def get_inquiries_with_replies():
+    """問い合わせと送信済み返信を結合して取得（CSVエクスポート用）"""
+    conn = _get_conn()
+    rows = conn.execute(
+        """
+        SELECT
+            i.inquiry_number,
+            i.inquiry_date,
+            i.customer_name,
+            i.category,
+            i.subject,
+            i.item_name,
+            i.item_number,
+            i.order_number,
+            i.body AS inquiry_body,
+            i.status,
+            r.body AS reply_body,
+            r.created_at AS reply_date
+        FROM inquiries i
+        LEFT JOIN replies r
+            ON i.inquiry_number = r.inquiry_number AND r.is_draft = 0
+        ORDER BY i.inquiry_date DESC, r.created_at ASC
+        """
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_last_sync():
     conn = _get_conn()
     row = conn.execute(
