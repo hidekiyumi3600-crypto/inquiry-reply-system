@@ -162,10 +162,10 @@ def log_sync(count, status="success", message=None):
 
 
 def get_inquiries_with_replies():
-    """問い合わせと全やり取りを時系列で取得（CSVエクスポート用）
+    """問い合わせと全やり取りを1行=1問い合わせで取得（CSVエクスポート用）
 
-    raw_jsonのrepliesから顧客・店舗双方のメッセージを展開し、
-    最初の問い合わせメッセージも含めて1行=1メッセージで返す。
+    raw_jsonのrepliesから顧客・店舗双方のメッセージを結合し、
+    1つのセルに全会話をまとめて返す。
     """
     conn = _get_conn()
     rows = conn.execute(
@@ -176,8 +176,28 @@ def get_inquiries_with_replies():
     result = []
     for row in rows:
         r = dict(row)
-        base = {
+
+        # 全会話を1つのテキストに結合
+        messages = []
+        # 最初の問い合わせ
+        date_short = (r.get("inquiry_date") or "")[:16]
+        messages.append(f"[顧客 {date_short}] {r.get('body') or ''}")
+
+        # raw_jsonからrepliesを結合
+        if r.get("raw_json"):
+            try:
+                raw = json.loads(r["raw_json"])
+                for reply in raw.get("replies", []):
+                    sender = "店舗" if reply.get("replyFrom", "").lower() == "merchant" else "顧客"
+                    reply_date = (reply.get("regDate") or "")[:16]
+                    msg = reply.get("message", "")
+                    messages.append(f"[{sender} {reply_date}] {msg}")
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        result.append({
             "inquiry_number": r["inquiry_number"],
+            "inquiry_date": r["inquiry_date"],
             "customer_name": r["customer_name"],
             "category": r["category"],
             "subject": r["subject"],
@@ -185,30 +205,8 @@ def get_inquiries_with_replies():
             "item_number": r["item_number"],
             "order_number": r["order_number"],
             "status": r["status"],
-        }
-
-        # 最初の問い合わせメッセージ
-        result.append({
-            **base,
-            "date": r["inquiry_date"],
-            "sender": "顧客",
-            "message": r["body"] or "",
+            "conversation": "\n".join(messages),
         })
-
-        # raw_jsonからrepliesを展開
-        if r.get("raw_json"):
-            try:
-                raw = json.loads(r["raw_json"])
-                for reply in raw.get("replies", []):
-                    sender = "店舗" if reply.get("replyFrom", "").lower() == "merchant" else "顧客"
-                    result.append({
-                        **base,
-                        "date": reply.get("regDate", ""),
-                        "sender": sender,
-                        "message": reply.get("message", ""),
-                    })
-            except (json.JSONDecodeError, TypeError):
-                pass
 
     return result
 

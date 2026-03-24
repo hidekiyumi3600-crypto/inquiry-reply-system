@@ -140,17 +140,15 @@ def render_sidebar():
             buf = io.StringIO()
             writer = csv.writer(buf)
             writer.writerow([
-                "問い合わせ番号", "日時", "発信者", "メッセージ内容",
-                "お客様名", "カテゴリ", "種別", "商品名",
-                "商品番号", "注文番号", "ステータス",
+                "問い合わせ番号", "問い合わせ日", "お客様名", "カテゴリ",
+                "種別", "商品名", "商品番号", "注文番号",
+                "ステータス", "全やり取り",
                 "AIレビュー", "レビューコメント",
             ])
             for r in rows:
                 writer.writerow([
                     r["inquiry_number"],
-                    r["date"],
-                    r["sender"],
-                    r["message"],
+                    r["inquiry_date"],
                     r["customer_name"],
                     r["category"],
                     r["subject"],
@@ -158,6 +156,7 @@ def render_sidebar():
                     r["item_number"],
                     r["order_number"],
                     r["status"],
+                    r["conversation"],
                     "",  # AIレビュー（スプレッドシートで記入）
                     "",  # レビューコメント（スプレッドシートで記入）
                 ])
