@@ -162,31 +162,55 @@ def log_sync(count, status="success", message=None):
 
 
 def get_inquiries_with_replies():
-    """問い合わせと送信済み返信を結合して取得（CSVエクスポート用）"""
+    """問い合わせと全やり取りを時系列で取得（CSVエクスポート用）
+
+    raw_jsonのrepliesから顧客・店舗双方のメッセージを展開し、
+    最初の問い合わせメッセージも含めて1行=1メッセージで返す。
+    """
     conn = _get_conn()
     rows = conn.execute(
-        """
-        SELECT
-            i.inquiry_number,
-            i.inquiry_date,
-            i.customer_name,
-            i.category,
-            i.subject,
-            i.item_name,
-            i.item_number,
-            i.order_number,
-            i.body AS inquiry_body,
-            i.status,
-            r.body AS reply_body,
-            r.created_at AS reply_date
-        FROM inquiries i
-        LEFT JOIN replies r
-            ON i.inquiry_number = r.inquiry_number AND r.is_draft = 0
-        ORDER BY i.inquiry_date DESC, r.created_at ASC
-        """
+        "SELECT * FROM inquiries ORDER BY inquiry_date DESC"
     ).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+
+    result = []
+    for row in rows:
+        r = dict(row)
+        base = {
+            "inquiry_number": r["inquiry_number"],
+            "customer_name": r["customer_name"],
+            "category": r["category"],
+            "subject": r["subject"],
+            "item_name": r["item_name"],
+            "item_number": r["item_number"],
+            "order_number": r["order_number"],
+            "status": r["status"],
+        }
+
+        # 最初の問い合わせメッセージ
+        result.append({
+            **base,
+            "date": r["inquiry_date"],
+            "sender": "顧客",
+            "message": r["body"] or "",
+        })
+
+        # raw_jsonからrepliesを展開
+        if r.get("raw_json"):
+            try:
+                raw = json.loads(r["raw_json"])
+                for reply in raw.get("replies", []):
+                    sender = "店舗" if reply.get("replyFrom", "").lower() == "merchant" else "顧客"
+                    result.append({
+                        **base,
+                        "date": reply.get("regDate", ""),
+                        "sender": sender,
+                        "message": reply.get("message", ""),
+                    })
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+    return result
 
 
 def get_last_sync():
